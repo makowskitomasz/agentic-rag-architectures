@@ -1,0 +1,37 @@
+name: CI Workflow
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: false
+          activate-environment: streaming_clusters
+          environment-file: environment.yml
+          python-version: 3.13
+          channels: conda-forge,defaults
+
+      - name: Verify environment
+        run: |
+          conda info
+          conda list
+
+      - name: Lint with Ruff
+        run: |
+          conda run -n streaming_clusters ruff check . --output-format=full
+
+      - name: Run Pytest
+        run: |
+          conda run -n streaming_clusters pytest src/clustering_api/tests/ --maxfail=1 --disable-warnings -q
