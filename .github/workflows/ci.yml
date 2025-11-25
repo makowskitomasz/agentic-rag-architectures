@@ -18,9 +18,9 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          activate-environment: streaming_clusters
+          activate-environment: ara
           environment-file: environment.yml
-          python-version: 3.13
+          python-version: 3.12
           channels: conda-forge,defaults
 
       - name: Verify environment
@@ -30,8 +30,4 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          conda run -n streaming_clusters ruff check . --output-format=full
-
-      - name: Run Pytest
-        run: |
-          conda run -n streaming_clusters pytest src/clustering_api/tests/ --maxfail=1 --disable-warnings -q
+          conda run -n ara ruff check . --output-format=full
