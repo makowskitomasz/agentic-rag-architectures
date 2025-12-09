@@ -23,6 +23,30 @@ DEFAULT_LLM_MODELS: Dict[str, str] = {
 
 
 @dataclass(frozen=True)
+class RoutingProfile:
+    name: str
+    embedding_provider: str
+    embedding_model: str
+    description: str = ""
+
+
+DEFAULT_ROUTING_PROFILES: Dict[str, RoutingProfile] = {
+    "balanced_openai": RoutingProfile(
+        name="balanced_openai",
+        embedding_provider="openai",
+        embedding_model=DEFAULT_EMBEDDING_MODELS["openai"],
+        description="High accuracy OpenAI embeddings",
+    ),
+    "fast_gemini": RoutingProfile(
+        name="fast_gemini",
+        embedding_provider="gemini",
+        embedding_model=DEFAULT_EMBEDDING_MODELS["gemini"],
+        description="Faster Gemini embeddings for exploratory questions",
+    ),
+}
+
+
+@dataclass(frozen=True)
 class EmbeddingConfig:
     provider: str
     model: str
@@ -67,3 +91,8 @@ def get_llm_config(provider: str | None = None) -> LLMConfig:
     model = os.getenv(model_env) or DEFAULT_LLM_MODELS[provider_name]
     api_key = _require_api_key(provider_name)
     return LLMConfig(provider=provider_name, model=model, api_key=api_key)
+
+
+@lru_cache(maxsize=None)
+def get_routing_profiles() -> Dict[str, RoutingProfile]:
+    return DEFAULT_ROUTING_PROFILES.copy()

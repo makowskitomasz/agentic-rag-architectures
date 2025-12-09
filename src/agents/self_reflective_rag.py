@@ -32,6 +32,11 @@ try:
 except ImportError as exc:  
     raise RuntimeError("Models module is required") from exc
 
+try:
+    from src.agents.active_retrieval import active_retrieval
+except ImportError:
+    active_retrieval = None
+
 logger = _get_logger(__name__) if callable(_get_logger) else logging.getLogger("REFLECT")
 
 
@@ -116,7 +121,6 @@ def _refine_answer(
         provider=provider,
         model=model,
         temperature=temperature,
-        system_prompt=prompt
     )
     return refined.strip()
 
@@ -127,9 +131,11 @@ def self_reflect_rag(
     query_embedding: np.ndarray,
     embeddings: np.ndarray,
     index_map: Dict[str, int],
+    embedding_provider: str | None = None,
+    embedding_model: str | None = None,
     provider: str = "openai",
     llm_model: str | None = None,
-    temperature: float = 0.0,
+    temperature: float = 1.0,
     k: int = 5,
     threshold: float = 0.5,
     use_hybrid: bool = True,
@@ -137,22 +143,55 @@ def self_reflect_rag(
     use_reranker: bool = False,
     reranker_model: str | None = None,
     rerank_top_k: int | None = None,
+    use_active_retrieval: bool = False,
+    active_iterations: int = 3,
+    active_sufficiency_threshold: float = 0.8,
 ) -> Dict[str, Any]:
     pipeline_start = time.perf_counter()
     logger.info("REFLECT | start | query_len=%d chunks=%d", len(query), len(chunks))
 
     retrieval_start = time.perf_counter()
-    retrieved_chunks = retrieve(
-        query_embedding=query_embedding,
-        embeddings=embeddings,
-        index_map=index_map,
-        chunks=chunks,
-        k=k,
-        threshold=threshold,
-        query_text=query,
-        use_hybrid=use_hybrid,
-        lexical_weight=lexical_weight,
-    )
+    if use_active_retrieval:
+        if active_retrieval is None:
+            raise RuntimeError("Active retrieval agent is not available.")
+        if embedding_provider is None or embedding_model is None:
+            raise ValueError("embedding_provider and embedding_model are required when use_active_retrieval=True.")
+        active_result = active_retrieval(
+            query=query,
+            chunks=chunks,
+            embeddings=embeddings,
+            index_map=index_map,
+            provider=provider,
+            llm_model=llm_model,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            k=k,
+            threshold=threshold,
+            use_hybrid=use_hybrid,
+            lexical_weight=lexical_weight,
+            use_reranker=use_reranker,
+            reranker_model=reranker_model,
+            rerank_top_k=rerank_top_k,
+            temperature=temperature,
+            max_iterations=active_iterations,
+            sufficiency_threshold=active_sufficiency_threshold,
+            query_embedding=query_embedding,
+        )
+        retrieved_chunks = active_result["chunks"]
+        logger.info("REFLECT | active retrieval | iterations=%d", len(active_result["logs"]))
+        active_time = active_result.get("total_ms", 0.0)
+    else:
+        retrieved_chunks = retrieve(
+            query_embedding=query_embedding,
+            embeddings=embeddings,
+            index_map=index_map,
+            chunks=chunks,
+            k=k,
+            threshold=threshold,
+            query_text=query,
+            use_hybrid=use_hybrid,
+            lexical_weight=lexical_weight,
+        )
     retrieval_time = (time.perf_counter() - retrieval_start) * 1000
     logger.info(
         "REFLECT | retrieval | retrieved=%d time=%.2f ms threshold=%.2f",
@@ -180,7 +219,14 @@ def self_reflect_rag(
             reranker_model or "default",
         )
 
-    timings: Dict[str, float] = {"initial_ms": 0.0, "critique_ms": 0.0, "refined_ms": 0.0, "rerank_ms": rerank_time}
+    timings: Dict[str, float] = {
+        "initial_ms": 0.0,
+        "critique_ms": 0.0,
+        "refined_ms": 0.0,
+        "rerank_ms": rerank_time,
+    }
+    if use_active_retrieval:
+        timings["active_ms"] = active_time
 
     start = time.perf_counter()
     initial_answer = generate_answer(
@@ -221,7 +267,7 @@ def self_reflect_rag(
     logger.info("REFLECT | final answer | length=%d tokens≈%d", len(refined_answer), final_tokens)
 
     total_time = (time.perf_counter() - pipeline_start) * 1000
-    logger.info(
+    logger.success(
         "REFLECT | summary | total=%.2f ms initial=%.2f critique=%.2f refined=%.2f retrieval=%.2f",
         total_time,
         timings["initial_ms"],

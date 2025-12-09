@@ -170,6 +170,12 @@ def _invoke_llm(
         raise ValueError(f"Unsupported provider: {provider}")
 
     tokens = _estimate_tokens(response)
+    preview: str
+    if isinstance(response, BaseModel):
+        preview = getattr(response, "content", response.model_dump_json())[:200]
+    else:
+        preview = str(response)[:200]
+    logger.llm("LLM | response preview: %s", preview)
     logger.info("LLM | answer size approx_tokens=%d", tokens)
     return response
 

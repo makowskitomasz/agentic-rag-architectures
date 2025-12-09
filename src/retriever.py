@@ -150,7 +150,7 @@ def retrieve(
     if not (0.0 <= lexical_weight <= 1.0):
         raise ValueError("lexical_weight must be between 0 and 1.")
 
-    logger.info("RETRIEVE | start | vectors=%d k=%d threshold=%.2f", len(embeddings), k, threshold)
+    logger.debug("RETRIEVE | start | vectors=%d k=%d threshold=%.2f", len(embeddings), k, threshold)
     logger.debug(
         "RETRIEVE | embedding shapes | query=%s embeddings=%s",
         query_embedding.shape,
@@ -189,7 +189,7 @@ def retrieve(
             lexical_enabled = bool(np.any(lexical_scores))
         else:
             lexical_enabled = False
-    logger.info("RETRIEVE | hybrid enabled=%s weight=%.2f", lexical_enabled, lexical_weight if lexical_enabled else 0.0)
+    logger.debug("RETRIEVE | hybrid enabled=%s weight=%.2f", lexical_enabled, lexical_weight if lexical_enabled else 0.0)
 
     if lexical_enabled:
         lexical_norm = _normalize_scores(lexical_scores)
@@ -199,7 +199,7 @@ def retrieve(
         ranking_scores = dense_norm
 
     filtered_indices = np.where(ranking_scores >= threshold)[0]
-    logger.info(
+    logger.debug(
         "RETRIEVE | threshold filtering | threshold=%.2f passed=%d",
         threshold,
         filtered_indices.size,
@@ -244,7 +244,8 @@ def retrieve(
             }
         )
 
-    logger.info("RETRIEVE | top_k selected | %s", selected_metadata)
+    logger.info("RETRIEVE | completed | selected=%d", len(results))
+    logger.debug("RETRIEVE | top_k selected | %s", selected_metadata)
     return [result.to_dict() for result in results]
 
 
