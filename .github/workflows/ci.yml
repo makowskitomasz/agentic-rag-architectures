@@ -14,20 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          environment-file: environment.yml
-          cache-downloads: true
-          cache-env: true
-          micromamba-version: latest
+          python-version: "3.12"
 
-      - name: Verify environment
-        run: micromamba run -n ara python -V
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff pytest
 
       - name: Lint with Ruff
-        run: micromamba run -n ara ruff check . --output-format=full
+        run: ruff check . --output-format=full
 
-      - name: Test with pytest
-        run: micromamba run -n ara pytest -v tests/
-
+      - name: Run tests with pytest
+        run: pytest -v tests/
