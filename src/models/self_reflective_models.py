@@ -6,13 +6,13 @@ from pydantic import BaseModel, Field
 
 
 class CritiqueModel(BaseModel):
-    missing_context: List[str] = Field(default_factory=list)
-    conflicts: List[str] = Field(default_factory=list)
-    logic_issues: List[str] = Field(default_factory=list)
-    hallucinations: List[str] = Field(default_factory=list)
-    precision_warnings: List[str] = Field(default_factory=list)
-    language_problems: List[str] = Field(default_factory=list)
-    reasoning_gaps: List[str] = Field(default_factory=list)
+    missing_context: List[str] = Field(default_factory=list, description="List of missing context points identified in the initial answer.")
+    conflicts: List[str] = Field(default_factory=list, description="List of conflicts identified in the initial answer.")
+    logic_issues: List[str] = Field(default_factory=list, description="List of logical issues identified in the initial answer.")
+    hallucinations: List[str] = Field(default_factory=list, description="List of hallucinations identified in the initial answer.")
+    precision_warnings: List[str] = Field(default_factory=list, description="List of precision warnings identified in the initial answer.")
+    language_problems: List[str] = Field(default_factory=list, description="List of language problems identified in the initial answer.")
+    reasoning_gaps: List[str] = Field(default_factory=list, description="List of reasoning gaps identified in the initial answer.")
 
 
 class SelfReflectiveRagOutput(BaseModel):
