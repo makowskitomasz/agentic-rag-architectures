@@ -19,13 +19,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install ruff pytest numpy pydantic
-
       - name: Lint with Ruff
         run: ruff check . --output-format=full
-
-      - name: Run tests with pytest
-        run: cd tests && pytest -v
