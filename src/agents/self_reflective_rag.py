@@ -18,14 +18,24 @@ except ImportError as exc:
     raise RuntimeError("Retriever module is required") from exc
 
 try:
-    from src.llm_orchestrator import generate_answer
+    from src.llm_orchestrator import generate_answer, generate_structured_answer
 except ImportError as exc:  
     raise RuntimeError("LLM orchestrator module is required") from exc
+
+try:
+    from src.reranker import rerank_chunks
+except ImportError as exc:  
+    raise RuntimeError("Reranker module is required") from exc
 
 try:
     from src.models.self_reflective_models import CritiqueModel, SelfReflectiveRagOutput
 except ImportError as exc:  
     raise RuntimeError("Models module is required") from exc
+
+try:
+    from src.models.structured_outputs import MarkdownDocument
+except ImportError as exc:  
+    raise RuntimeError("Structured output models are required") from exc
 
 logger = _get_logger(__name__) if callable(_get_logger) else logging.getLogger("REFLECT")
 
@@ -59,21 +69,19 @@ def _critique_answer(
         "Answer:\n{answer}"
     ).format(context=_format_context(chunks), answer=answer)
 
-    raw_response = generate_answer(
-        query=prompt,
-        context_chunks=[],
-        provider=provider,
-        model=model,
-        temperature=temperature,
-    )
-    logger.info("REFLECT | critique raw response: %s", raw_response)
-
     try:
-        parsed = json.loads(raw_response)
-        critique = CritiqueModel(**parsed)
+        critique = generate_structured_answer(
+            query=prompt,
+            context_chunks=[],
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            response_model=CritiqueModel,
+        )
+        logger.info("REFLECT | critique parsed successfully.")
         return critique
-    except (json.JSONDecodeError, TypeError, ValueError) as exc:
-        logger.warning("REFLECT | critique parsing failed; returning empty model. error=%s", exc)
+    except Exception as exc:
+        logger.warning("REFLECT | critique structured call failed; returning empty model. error=%s", exc)
         return CritiqueModel()
 
 
@@ -107,14 +115,15 @@ def _refine_answer(
         initial=initial_answer,
     )
 
-    refined = generate_answer(
+    refined_doc = generate_structured_answer(
         query=prompt,
         context_chunks=[],
         provider=provider,
         model=model,
         temperature=temperature,
+        response_model=SelfReflectiveRagOutput,
     )
-    return refined.strip()
+    return refined_doc.content.strip()
 
 
 def self_reflect_rag(
@@ -128,6 +137,11 @@ def self_reflect_rag(
     temperature: float = 0.0,
     k: int = 5,
     threshold: float = 0.5,
+    use_hybrid: bool = True,
+    lexical_weight: float = 0.5,
+    use_reranker: bool = False,
+    reranker_model: str | None = None,
+    rerank_top_k: int | None = None,
 ) -> Dict[str, Any]:
     pipeline_start = time.perf_counter()
     logger.info("REFLECT | start | query_len=%d chunks=%d", len(query), len(chunks))
@@ -140,6 +154,9 @@ def self_reflect_rag(
         chunks=chunks,
         k=k,
         threshold=threshold,
+        query_text=query,
+        use_hybrid=use_hybrid,
+        lexical_weight=lexical_weight,
     )
     retrieval_time = (time.perf_counter() - retrieval_start) * 1000
     logger.info(
@@ -149,12 +166,31 @@ def self_reflect_rag(
         threshold,
     )
 
-    timings: Dict[str, float] = {"initial_ms": 0.0, "critique_ms": 0.0, "refined_ms": 0.0}
+    reranked_chunks = retrieved_chunks
+    rerank_time = 0.0
+    if use_reranker and retrieved_chunks:
+        rerank_start = time.perf_counter()
+        target_top_k = rerank_top_k if rerank_top_k is not None else k
+        reranked_chunks = rerank_chunks(
+            query=query,
+            chunks=retrieved_chunks,
+            model_name=reranker_model,
+            top_k=target_top_k,
+        )
+        rerank_time = (time.perf_counter() - rerank_start) * 1000
+        logger.info(
+            "REFLECT | rerank | reordered=%d time=%.2f ms model=%s",
+            len(reranked_chunks),
+            rerank_time,
+            reranker_model or "default",
+        )
+
+    timings: Dict[str, float] = {"initial_ms": 0.0, "critique_ms": 0.0, "refined_ms": 0.0, "rerank_ms": rerank_time}
 
     start = time.perf_counter()
     initial_answer = generate_answer(
         query=query,
-        context_chunks=retrieved_chunks,
+        context_chunks=reranked_chunks,
         provider=provider,
         model=llm_model,
         temperature=temperature,
@@ -165,7 +201,7 @@ def self_reflect_rag(
     start = time.perf_counter()
     critique = _critique_answer(
         answer=initial_answer,
-        chunks=retrieved_chunks,
+        chunks=reranked_chunks,
         provider=provider,
         model=llm_model,
         temperature=temperature,
@@ -178,7 +214,7 @@ def self_reflect_rag(
         query=query,
         initial_answer=initial_answer,
         critique=critique,
-        chunks=retrieved_chunks,
+        chunks=reranked_chunks,
         provider=provider,
         model=llm_model,
         temperature=temperature,
@@ -204,7 +240,7 @@ def self_reflect_rag(
         initial_answer=initial_answer,
         critique=critique,
         refined_answer=refined_answer,
-        retrieved_chunks=retrieved_chunks,
+        retrieved_chunks=reranked_chunks,
         timings={**timings, "retrieval_ms": retrieval_time, "total_ms": total_time},
         provider=provider,
         model=llm_model or "default",

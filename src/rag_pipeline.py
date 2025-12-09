@@ -21,6 +21,11 @@ except ImportError as exc:
     raise RuntimeError("Retriever module is required") from exc
 
 try:
+    from src.reranker import rerank_chunks
+except ImportError as exc:  
+    raise RuntimeError("Reranker module is required") from exc
+
+try:
     from src.llm_orchestrator import generate_answer
 except ImportError as exc:  
     raise RuntimeError("LLM orchestrator module is required") from exc
@@ -46,6 +51,11 @@ def rag(
     llm_model: str | None = None,
     k: int = 5,
     threshold: float = 0.5,
+    use_hybrid: bool = True,
+    lexical_weight: float = 0.5,
+    use_reranker: bool = False,
+    reranker_model: str | None = None,
+    rerank_top_k: int | None = None,
 ) -> Dict[str, Any]:
     if not isinstance(query, str) or not query.strip():
         raise ValueError("Query must be a non-empty string")
@@ -80,6 +90,9 @@ def rag(
         chunks=chunks,
         k=k,
         threshold=threshold,
+        query_text=query,
+        use_hybrid=use_hybrid,
+        lexical_weight=lexical_weight,
     )
     retrieval_elapsed = (time.perf_counter() - retrieval_start) * 1000
     logger.info(
@@ -89,11 +102,30 @@ def rag(
         threshold,
     )
 
+    reranked_chunks = retrieved_chunks
+    rerank_elapsed = 0.0
+    if use_reranker and retrieved_chunks:
+        rerank_start = time.perf_counter()
+        target_top_k = rerank_top_k if rerank_top_k is not None else k
+        reranked_chunks = rerank_chunks(
+            query=query,
+            chunks=retrieved_chunks,
+            model_name=reranker_model,
+            top_k=target_top_k,
+        )
+        rerank_elapsed = (time.perf_counter() - rerank_start) * 1000
+        logger.info(
+            "RAG | rerank | reordered=%d time=%.2f ms model=%s",
+            len(reranked_chunks),
+            rerank_elapsed,
+            reranker_model or "default",
+        )
+
     llm_config = get_llm_config(provider)
     llm_start = time.perf_counter()
     answer = generate_answer(
         query=query,
-        context_chunks=retrieved_chunks,
+        context_chunks=reranked_chunks,
         provider=llm_config.provider,
         model=llm_model or llm_config.model,
         temperature=1.0,
@@ -115,7 +147,7 @@ def rag(
     return {
         "query": query,
         "answer": answer,
-        "chunks": retrieved_chunks,
+        "chunks": reranked_chunks,
         "tokens_estimated": answer_tokens,
         "time_ms": total_elapsed,
         "provider": llm_config.provider,

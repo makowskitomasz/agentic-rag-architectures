@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Type
+
+from pydantic import BaseModel
 
 try:
     from src.utils import get_logger as _get_logger  
@@ -40,16 +42,46 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
     return "\n\n".join(formatted_parts)
 
 
-def _call_openai(prompt: str, system_prompt: str, query: str, model: str, temperature: float, api_key: str) -> str:
+def _call_openai(
+    prompt: str,
+    system_prompt: str,
+    query: str,
+    model: str,
+    temperature: float,
+    api_key: str,
+    response_model: Type[BaseModel] | None = None,
+) -> Any:
     try:
         from openai import OpenAI
     except ImportError as exc:  
         raise RuntimeError("openai package is required for OpenAI provider") from exc
 
-    client = OpenAI(api_key=api_key)
+    base_client = OpenAI(api_key=api_key)
+    if response_model is not None:
+        try:
+            import instructor
+        except ImportError as exc:
+            raise RuntimeError("instructor package is required for structured OpenAI responses") from exc
+
+        client = instructor.patch(base_client, mode=instructor.Mode.MD_JSON)
+    else:
+        client = base_client
+
     try:
         start = time.perf_counter()
-        logger.info(f"LLM | Sending request to OpenAI question: {query}...")
+        logger.info("LLM | Sending request to OpenAI question: %s...", query)
+        if response_model is not None:
+            response = client.beta.chat.completions.parse(
+                model=model,
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}],
+                temperature=temperature,
+                response_format=response_model,
+            )
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.info("LLM | OpenAI request completed in %.2f ms", elapsed_ms)
+            parsed = response.choices[0].message.parsed
+            logger.debug("LLM | OpenAI parsed response: %s", parsed)
+            return parsed
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}],
@@ -57,11 +89,9 @@ def _call_openai(prompt: str, system_prompt: str, query: str, model: str, temper
         )
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.info("LLM | OpenAI request completed in %.2f ms", elapsed_ms)
-        logger.info(f"LLM | OpenAI response: {response.choices[0].message.content}")
+        return response.choices[0].message.content or ""
     except Exception as exc:  
         raise RuntimeError(f"OpenAI completion failed: {exc}") from exc
-
-    return response.choices[0].message.content or ""
 
 
 def _call_gemini(prompt: str, system_prompt: str, query: str, model: str, temperature: float, api_key: str) -> str:
@@ -84,14 +114,23 @@ def _call_gemini(prompt: str, system_prompt: str, query: str, model: str, temper
     return getattr(response, "text", "")
 
 
-def generate_answer(
+def _estimate_tokens(payload: Any) -> int:
+    if isinstance(payload, str):
+        return len(payload.split())
+    if isinstance(payload, BaseModel):
+        return len(payload.model_dump_json().split())
+    return len(str(payload).split())
+
+
+def _invoke_llm(
     query: str,
     context_chunks: List[Dict[str, Any]],
-    provider: str | None = None,
-    model: str | None = None,
-    temperature: float = 1.0,
-    system_prompt: str | None = None,
-) -> str:
+    provider: str | None,
+    model: str | None,
+    temperature: float,
+    system_prompt: str | None,
+    response_model: Type[BaseModel] | None,
+) -> Any:
     config = get_llm_config(provider)
     provider_key = config.provider
     context = _format_context(context_chunks)
@@ -114,15 +153,72 @@ def generate_answer(
     logger.debug("LLM | prompt preview: %s", prompt[:300])
 
     if provider_key == "openai":
-        answer = _call_openai(prompt, final_system_prompt, query, chosen_model, temperature, config.api_key)
+        response = _call_openai(
+            prompt,
+            final_system_prompt,
+            query,
+            chosen_model,
+            temperature,
+            config.api_key,
+            response_model=response_model,
+        )
     elif provider_key == "gemini":
-        answer = _call_gemini(prompt, final_system_prompt, query, chosen_model, temperature, config.api_key)
+        if response_model is not None:
+            raise ValueError("Structured outputs are not supported for Gemini provider.")
+        response = _call_gemini(prompt, final_system_prompt, query, chosen_model, temperature, config.api_key)
     else:  
         raise ValueError(f"Unsupported provider: {provider}")
 
-    answer_tokens = len(answer.split())
-    logger.info("LLM | answer size: %d chars approx_tokens=%d", len(answer), answer_tokens)
-    return answer
+    tokens = _estimate_tokens(response)
+    logger.info("LLM | answer size approx_tokens=%d", tokens)
+    return response
+
+
+def generate_answer(
+    query: str,
+    context_chunks: List[Dict[str, Any]],
+    provider: str | None = None,
+    model: str | None = None,
+    temperature: float = 1.0,
+    system_prompt: str | None = None,
+) -> str:
+    response = _invoke_llm(
+        query=query,
+        context_chunks=context_chunks,
+        provider=provider,
+        model=model,
+        temperature=temperature,
+        system_prompt=system_prompt,
+        response_model=None,
+    )
+    if isinstance(response, str):
+        return response
+    if isinstance(response, BaseModel):
+        return getattr(response, "content", response.model_dump_json())
+    return str(response)
+
+
+def generate_structured_answer(
+    query: str,
+    context_chunks: List[Dict[str, Any]],
+    response_model: Type[BaseModel],
+    provider: str | None = None,
+    model: str | None = None,
+    temperature: float = 1.0,
+    system_prompt: str | None = None,
+) -> BaseModel:
+    response = _invoke_llm(
+        query=query,
+        context_chunks=context_chunks,
+        provider=provider,
+        model=model,
+        temperature=temperature,
+        system_prompt=system_prompt,
+        response_model=response_model,
+    )
+    if not isinstance(response, BaseModel):
+        raise RuntimeError("Structured LLM call did not return a BaseModel instance.")
+    return response
 
 
 if __name__ == "__main__":  
