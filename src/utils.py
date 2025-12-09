@@ -9,11 +9,31 @@ LOG_FORMAT = "[%(asctime)s][%(levelname)s][%(name)s] %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
+SUCCESS_LEVEL = logging.INFO + 5
+LLM_RESPONSE_LEVEL = logging.INFO + 7
+logging.addLevelName(SUCCESS_LEVEL, "SUCCESS")
+logging.addLevelName(LLM_RESPONSE_LEVEL, "LLM")
+
+
+class AppLogger(logging.Logger):
+    def success(self, message: str, *args, **kwargs) -> None:
+        if self.isEnabledFor(SUCCESS_LEVEL):
+            self._log(SUCCESS_LEVEL, message, args, **kwargs)
+
+    def llm(self, message: str, *args, **kwargs) -> None:
+        if self.isEnabledFor(LLM_RESPONSE_LEVEL):
+            self._log(LLM_RESPONSE_LEVEL, message, args, **kwargs)
+
+
+logging.setLoggerClass(AppLogger)
+
 _COLOR_MAP = {
-    "DEBUG": "\033[36m",   # Cyan
-    "INFO": "\033[32m",    # Green
-    "WARNING": "\033[33m", # Yellow
-    "ERROR": "\033[31m",   # Red
+    "DEBUG": "\033[90m",
+    "INFO": "\033[37m",
+    "SUCCESS": "\033[32m",
+    "LLM": "\033[34m",
+    "WARNING": "\033[33m",
+    "ERROR": "\033[31m",
     "CRITICAL": "\033[35m",
 }
 _RESET = "\033[0m"

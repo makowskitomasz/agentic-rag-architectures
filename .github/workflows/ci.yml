@@ -14,20 +14,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Conda
-        uses: conda-incubator/setup-miniconda@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          auto-activate-base: false
-          activate-environment: ara
-          environment-file: environment.yml
-          python-version: 3.12
-          channels: conda-forge,defaults
+          python-version: "3.12"
 
-      - name: Verify environment
+      - name: Install dependencies
         run: |
-          conda info
-          conda list
+          pip install --upgrade pip
+          pip install ruff
 
       - name: Lint with Ruff
-        run: |
-          conda run -n ara ruff check . --output-format=full
+        run: ruff check . --output-format=full

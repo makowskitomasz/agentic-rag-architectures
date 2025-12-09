@@ -23,3 +23,6 @@ activate:
 
 lint:
 	ruff check . --output-format=full --fix
+
+test:
+	cd tests && pytest -v
