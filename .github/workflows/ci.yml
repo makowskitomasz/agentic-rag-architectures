@@ -7,7 +7,7 @@ on:
     branches: ["*"]
 
 env:
-  MAKE_DIR: ../..
+  MAKE_DIR: .
 
 jobs:
   test:
