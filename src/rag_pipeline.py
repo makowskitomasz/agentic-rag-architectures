@@ -231,7 +231,7 @@ def rag(
                 use_reranker=use_reranker,
                 reranker_model=reranker_model,
                 rerank_top_k=rerank_top_k,
-                temperature=temperature,
+                temperature=1.0,
                 followup_rounds=min(2, decision.followup_rounds),
             )
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Dict
 
 sys.path.append(os.path.join(os.getcwd(), '..'))
 

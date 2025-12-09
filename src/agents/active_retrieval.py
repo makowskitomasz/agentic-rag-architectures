@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 
 import numpy as np
 from pydantic import BaseModel, Field

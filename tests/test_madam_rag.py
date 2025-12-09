@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.getcwd(), '..'))
 
 import numpy as np
 
-from src.agents.madam_rag import DebaterRecord, DebaterResponse, ModeratorDecision, ModeratorFollowUp, run_madam_rag
+from src.agents.madam_rag import DebaterRecord, ModeratorDecision, ModeratorFollowUp, run_madam_rag
 
 
 def test_madam_rag_without_followups():
