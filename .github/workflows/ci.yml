@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: ["*"]
 
-env:
-  MAKE_DIR: .
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,8 +14,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Lint with Ruff
-        run: make -C "${{ env.MAKE_DIR }}" lint
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          cache-downloads: true
+          cache-env: true
+          micromamba-version: latest
 
-      - name: Run tests with pytest
-        run: make -C "${{ env.MAKE_DIR }}" test
+      - name: Verify environment
+        run: micromamba run -n ara python -V
+
+      - name: Lint with Ruff
+        run: micromamba run -n ara ruff check . --output-format=full
+
+      - name: Test with pytest
+        run: micromamba run -n ara pytest -v tests/
+
