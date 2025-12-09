@@ -32,11 +32,6 @@ try:
 except ImportError as exc:  
     raise RuntimeError("Models module is required") from exc
 
-try:
-    from src.models.structured_outputs import MarkdownDocument
-except ImportError as exc:  
-    raise RuntimeError("Structured output models are required") from exc
-
 logger = _get_logger(__name__) if callable(_get_logger) else logging.getLogger("REFLECT")
 
 
@@ -115,15 +110,15 @@ def _refine_answer(
         initial=initial_answer,
     )
 
-    refined_doc = generate_structured_answer(
+    refined = generate_answer(
         query=prompt,
         context_chunks=[],
         provider=provider,
         model=model,
         temperature=temperature,
-        response_model=SelfReflectiveRagOutput,
+        system_prompt=prompt
     )
-    return refined_doc.content.strip()
+    return refined.strip()
 
 
 def self_reflect_rag(
