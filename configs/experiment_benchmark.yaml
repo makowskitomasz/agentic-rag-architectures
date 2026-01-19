@@ -1,0 +1,74 @@
+project:
+  processed_dir: data/benchmark/processed
+  embeddings_dir: embeddings/benchmark
+  chunks_path: data/benchmark/processed/chunks.json
+  embeddings_path: embeddings/benchmark/embeddings.npy
+  index_path: embeddings/benchmark/embedding_index.json
+
+sources:
+  raw_dir: data/benchmark/raw
+
+questions:
+  path: data/benchmark/benchmark_questions_sample.json
+  format: json
+  question_field: question
+  id_field: id
+  answer_field: answer
+  limit: null
+
+chunking:
+  chunk_size: 400
+  overlap: 50
+
+embedding:
+  batch_size: 16
+
+providers:
+  llm_provider: openai
+  llm_model: gpt-5-nano
+  embedding_provider: openai
+  embedding_model: text-embedding-3-small
+
+retrieval:
+  k: 5
+  threshold: 0.5
+
+flags:
+  chunk: false
+  embed: false
+  overwrite_chunks: false
+  overwrite_embeddings: false
+
+pipelines:
+  run:
+    - vanilla
+    - self_reflective
+    - query_decomposition
+    - chain_of_verification
+    - active_retrieval
+    - marag
+    - madam_rag
+    - routing
+
+run:
+  self_reflect_temperature: 1.0
+  self_reflect_active_retrieval: true
+  concurrency: 10
+  checkpoint_every_questions: 2
+  use_reranker: true
+  reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
+  rerank_top_k: null
+  active_iterations: 3
+  active_sufficiency_threshold: 0.8
+  verification_iterations: 2
+  verification_statements: 3
+  marag_iterations: 2
+  madam_followup_rounds: 1
+
+output:
+  results_csv: results/benchmark/experiment_results.csv
+  results_json: results/benchmark/experiment_results.json
+  logs_json: results/benchmark/experiment_logs.json
+
+logging:
+  file: results/benchmark/experiment_run.log

@@ -54,11 +54,15 @@ def rerank_chunks(
         logger.warning("RERANK | top_k <= 0 provided; returning no chunks.")
         return []
 
-    model = _load_cross_encoder(chosen_model, max_length=max_length)
-    pairs = [[query, chunk.get("text", "")] for chunk in chunks]
-    start = time.perf_counter()
-    scores = model.predict(pairs, batch_size=batch_size)
-    elapsed_ms = (time.perf_counter() - start) * 1000
+    try:
+        model = _load_cross_encoder(chosen_model, max_length=max_length)
+        pairs = [[query, chunk.get("text", "")] for chunk in chunks]
+        start = time.perf_counter()
+        scores = model.predict(pairs, batch_size=batch_size)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+    except Exception as exc:  # pragma: no cover - runtime/torch failures
+        logger.warning("RERANK | failed | returning original chunks | error=%s", exc)
+        return chunks
 
     score_array = np.array(scores, dtype=float).reshape(-1)
     indices = np.argsort(score_array)[::-1]

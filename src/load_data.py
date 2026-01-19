@@ -24,7 +24,7 @@ def _read_file(file_path: Path) -> str:
     return file_path.read_text(encoding="utf-8")
 
 
-def load_markdown_files(path: str = "data/raw") -> List[Document]:
+def load_markdown_files(path: str = "data/future_poland/raw") -> List[Document]:
     """Load markdown files from *path* and return structured document records."""
 
     directory = Path(path)

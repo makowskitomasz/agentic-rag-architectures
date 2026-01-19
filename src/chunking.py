@@ -58,7 +58,7 @@ def chunk_documents(
     documents: List[Document],
     chunk_size: int = 400,
     overlap: int = 50,
-    output_path: str = "../data/processed/chunks.json",
+    output_path: str = "../data/future_poland/processed/chunks.json",
 ) -> List[Chunk]:
     if not documents:
         return []
@@ -87,8 +87,8 @@ if __name__ == "__main__":
             "id": "example",
             "filename": "example.md",
             "text": "Sample text for chunking demonstration.",
-            "path": "data/raw/example.md",
+            "path": "data/future_poland/raw/example.md",
         }
     ]
-    chunks = chunk_documents(example_docs, chunk_size=5, overlap=1, output_path="data/processed/_temp_chunks.json")
+    chunks = chunk_documents(example_docs, chunk_size=5, overlap=1, output_path="data/future_poland/processed/_temp_chunks.json")
     print(len(chunks))

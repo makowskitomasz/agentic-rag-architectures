@@ -6,10 +6,10 @@ This repository does not rely on a publicly available corpus. Instead, we crafte
 
 | File | Purpose | Notes |
 | --- | --- | --- |
-| `data/questions.csv` | Canonical evaluation set used by the notebooks. | Contains hand-written prompts that target different reasoning modes (multi-hop comparisons, fact-checking, chain-of-thought, routing stress-tests). Some questions explicitly pit two sports against each other (“football or volleyball?”, “which drill is better…”) so hybrid retrievers and rerankers are exercised. |
-| `data/d_questions.json` | JSON flavor of the same evaluation set. | Keeps extra metadata fields (difficulty, category) to enable routing or curriculum-style experiments. |
-| `data/raw/*.md` | Knowledge base. Split into two families described below. | Files were written to include subtle contradictions, cross-references, and values designed for factual grounding tests. |
-| `data/processed/chunks.json` | Pre-split chunks used by the retriever. | Generated from the markdown sources. Each chunk preserves the `chunk_id`, which allows MADAM-RAG and Chain-of-Verification to cite evidence. |
+| `data/future_poland/questions.csv` | Canonical evaluation set used by the notebooks. | Contains hand-written prompts that target different reasoning modes (multi-hop comparisons, fact-checking, chain-of-thought, routing stress-tests). Some questions explicitly pit two sports against each other (“football or volleyball?”, “which drill is better…”) so hybrid retrievers and rerankers are exercised. |
+| `data/future_poland/d_questions.json` | JSON flavor of the same evaluation set. | Keeps extra metadata fields (difficulty, category) to enable routing or curriculum-style experiments. |
+| `data/future_poland/raw/*.md` | Knowledge base. Split into two families described below. | Files were written to include subtle contradictions, cross-references, and values designed for factual grounding tests. |
+| `data/future_poland/processed/chunks.json` | Pre-split chunks used by the retriever. | Generated from the markdown sources. Each chunk preserves the `chunk_id`, which allows MADAM-RAG and Chain-of-Verification to cite evidence. |
 
 ## Futuristic policy series `D01.md` – `D20.md`
 
@@ -44,8 +44,8 @@ This second family supports the short, factoid-style questions. Each file intent
 
 ## Extending the artificial corpus
 
-- Add new markdown files under `data/raw/` following the same pattern: dense content, embedded canonical facts, and subtle “what-if” deviations.
-- Update `data/questions.csv` with new categories (e.g., finance, medicine). Keep at least a few multi-hop prompts so Query Decomposition and Chain-of-Verification have room to shine.
+- Add new markdown files under `data/future_poland/raw/` following the same pattern: dense content, embedded canonical facts, and subtle “what-if” deviations.
+- Update `data/future_poland/questions.csv` with new categories (e.g., finance, medicine). Keep at least a few multi-hop prompts so Query Decomposition and Chain-of-Verification have room to shine.
 - Regenerate processed chunks (`python scripts/build_chunks.py`, if available) so retrieval stays in sync.
 
 By documenting the intent of each artificial file, we can reproduce experiments deterministically, explain agent behavior during demos, and onboard collaborators quickly. Feel free to link this note from your presentations or README if you need to justify why the evaluation questions look “too tailored” — that tailoring is deliberate to validate the agentic architectures.
