@@ -208,5 +208,7 @@ __marimo__/
 
 # Everything in data directory
 data/*
-results/*
+results/**
+!results/**/
+!results/**/*.ipynb
 embeddings/*

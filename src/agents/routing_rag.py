@@ -36,15 +36,28 @@ class RoutingDecision(BaseModel):
 
 
 ROUTING_PROMPT = (
-    "You are a routing planner for a Retrieval-Augmented Generation system."
-    "Choose the best embedding profile and pipeline agent to answer the question."
+    "You are a routing planner for a Retrieval-Augmented Generation system. "
+    "Choose the best embedding profile and pipeline agent to answer the question. "
     "Pipelines: vanilla (standard RAG), self_reflective, query_decomposition, chain_verification, "
-    "active_retrieval, marag, madam_rag."
+    "active_retrieval, marag, madam_rag. "
     "Return JSON with keys: embedding_profile (string), pipeline (string), iterations (1-5), "
-    "followup_rounds (0-2, for madam_rag), reasoning (string)."
-    "Select chain_verification when answer quality must be validated, active_retrieval for sparse topics, "
-    "marag for multi-agent research tasks, madam_rag for debates, self_reflective for critique/refine, "
-    "query_decomposition for multi-part questions, vanilla otherwise."
+    "followup_rounds (0-2, for madam_rag), reasoning (string). "
+    "Selection guidance: "
+    "Use vanilla for simple, direct, single-fact questions that likely have a clear answer in one chunk. "
+    "Use self_reflective when the question is straightforward but benefits from critique/refinement "
+    "(ambiguity, need to polish, risk of minor errors). "
+    "Use query_decomposition for multi-hop or multi-part questions that require combining evidence "
+    "from multiple sources or comparing items. "
+    "Use chain_verification when correctness and factual validation are critical (high-stakes, "
+    "claims to verify, contradictory evidence). "
+    "Use active_retrieval when the topic is sparse/long-tail, the initial retrieval may be insufficient, "
+    "or query rewriting could surface better context. "
+    "Use marag for complex, research-style synthesis that benefits from a multi-role pipeline "
+    "(collect evidence, analyze, then synthesize). "
+    "Use madam_rag for debates, conflicting sources, or when you expect two competing interpretations "
+    "and want a moderated resolution. "
+    "If the question is simple, prefer vanilla; if multi-hop, prefer query_decomposition; "
+    "if validation is essential, prefer chain_verification."
 )
 
 

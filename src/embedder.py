@@ -174,7 +174,7 @@ def generate_query_embedding(
 
 
 if __name__ == "__main__":  
-    chunks_path = Path("data/processed/chunks.json")
+    chunks_path = Path("data/future_poland/processed/chunks.json")
     if chunks_path.exists():
         loaded_chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
     else:

@@ -465,9 +465,9 @@ def rag(
 
 
 if __name__ == "__main__":  
-    chunks_path = Path("data/processed/chunks.json")
-    embeddings_path = Path("embeddings/embeddings.npy")
-    index_path = Path("embeddings/embedding_index.json")
+    chunks_path = Path("data/future_poland/processed/chunks.json")
+    embeddings_path = Path("embeddings/future_poland/embeddings.npy")
+    index_path = Path("embeddings/future_poland/embedding_index.json")
 
     if chunks_path.exists() and embeddings_path.exists() and index_path.exists():
         loaded_chunks = json.loads(chunks_path.read_text(encoding="utf-8"))

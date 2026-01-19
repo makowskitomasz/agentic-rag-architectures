@@ -69,7 +69,6 @@ def _call_openai(
 
     try:
         start = time.perf_counter()
-        logger.info("LLM | Sending request to OpenAI question: %s...", query)
         if response_model is not None:
             response = client.beta.chat.completions.parse(
                 model=model,
