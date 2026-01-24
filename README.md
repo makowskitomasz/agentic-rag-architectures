@@ -1,5 +1,29 @@
 # Agentic RAG Architectures
 
+## Project Map (Start Here)
+
+If you are new to the repo, this is where things live and how to run it.
+
+- **Core code:** `src/` (pipelines, agents, retrieval, logging).
+- **Configs:** `configs/` (YAML experiment configs).
+- **Datasets:** `data/` (synthetic `future_poland` + benchmark conversion).
+- **Embeddings:** `embeddings/` (precomputed vectors per dataset).
+- **Results:** `results/` (all outputs from experiments/single runs).
+  - Typical files: `results/experiment_results.csv`, `results/experiment_logs.json`,
+    `results/evaluation_summary.json`, `results/single_run.json`.
+- **Notebooks:** `notebooks/` (experiments + evaluation dashboards).
+- **Scripts:** `scripts/` (CLI runners, batch/single).
+- **Docs:** `docs/` (architectures + dataset notes).
+- **Tests:** `tests/` (unit tests for key agents).
+
+**Quick run (end-to-end):**
+1. `uv sync`
+2. `cp .env.example .env` and set your API keys.
+3. `uv run python scripts/run_experiments.py --config configs/experiment.yaml`
+4. Open `notebooks/04_evaluation.ipynb` in Jupyter and run all cells.
+
+The evaluation step writes summary artifacts to `results/`.
+
 This repository explores advanced Retrieval-Augmented Generation (RAG) strategies built on a shared retrieval stack (hybrid dense + lexical search, reranking, cross-encoder re-ranking, optional query rewriting). On top of the baseline pipeline we compose several agents:
 
 - **Vanilla RAG** – single-shot retrieval + generation.
