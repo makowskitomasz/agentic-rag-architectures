@@ -79,6 +79,13 @@ All modules load `.env` via `src/config.py`, so once the variables are set you c
 
 ---
 
+## Data
+
+- https://huggingface.co/datasets/rag-datasets/rag-mini-wikipedia - Miniwikipedia benchmark dataset
+- https://huggingface.co/datasets/makotoma/future-poland-rag-benchmark - Future Poland dataset
+
+---
+
 ## Data Layout
 
 - `data/future_poland/raw/*.md` – synthetic knowledge base.
